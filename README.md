@@ -11,6 +11,10 @@ It's the [FlyGambler](https://github.com/jaylendilkhush2028/flygambler) idea —
 the fruit-fly mushroom body as a dopamine reinforcement-learning machine — made
 **multi-agent and competitive**.
 
+**▶ Watch it live (3D):** <https://claude.ai/artifact/QUZfvSoUzvYhnMAgxRaURP> — a
+3D table where the flies play Texas Hold'em **one at a time** through the flop,
+turn and river, with each acting fly's mushroom body firing in a side panel.
+
 ![A FlyPoker run](assets/table.png)
 
 *6 flies, 6000 hands. Top: chip fortunes per seat (a drop to ~$0 is a fly busting;
@@ -74,6 +78,7 @@ flypoker/   cards.py (deck + 7-card evaluator) · agent.py (the fly brain) ·
             table.py (deal/bet/showdown/death) · simulate.py · plots.py
 scripts/    run_table.py
 tests/      hand-evaluator + learning tests
+dashboard/  fly_poker.html   (the live 3D app — a self-contained JS port)
 assets/     the README figure
 ```
 

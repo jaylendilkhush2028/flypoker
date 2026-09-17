@@ -1,0 +1,454 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FlyPoker 3D</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@300;400;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+  :root{
+    --ground:#060910; --panel:#0c131f; --panel-2:#0a1018; --hair:#1a2536;
+    --ink:#cfdaea; --muted:#6b7c92; --faint:#3a4759;
+    --dopa:#35e0a1; --pain:#ff4d6d; --kc:#4aa3ff; --gold:#f5c451; --mood:#a58be0;
+    --glow:0 0 12px rgba(53,224,161,.35);
+  }
+  *{box-sizing:border-box}
+  body{background:radial-gradient(1200px 700px at 78% -10%,rgba(74,163,255,.08),transparent 60%),
+    radial-gradient(900px 600px at 8% 110%,rgba(53,224,161,.06),transparent 55%),var(--ground);
+    color:var(--ink); font-family:"Chivo",system-ui,sans-serif; -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:1180px; margin:0 auto; padding-block:24px; padding-inline:18px}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace; font-variant-numeric:tabular-nums}
+  header{display:flex; align-items:flex-end; justify-content:space-between; gap:18px; flex-wrap:wrap}
+  .brand h1{font-weight:900; font-size:clamp(26px,4vw,40px); letter-spacing:-.02em; margin:0}
+  .brand .fly{filter:drop-shadow(var(--glow))}
+  .tag{color:var(--muted); font-size:13px; max-width:60ch; margin-top:4px; line-height:1.5}
+  .hud{font-family:"IBM Plex Mono",monospace; font-size:12.5px; letter-spacing:.05em; color:var(--muted);
+    border:1px solid var(--hair); border-radius:8px; padding:8px 12px; white-space:nowrap}
+  .grid{display:grid; grid-template-columns:1.4fr 1fr; gap:14px; margin-top:16px}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+  .panel{background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--hair); border-radius:14px; padding:14px}
+  .panel h2{margin:0 0 8px; font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--muted)}
+  canvas{width:100%; height:auto; display:block; border-radius:8px}
+  .strip{display:grid; grid-template-columns:1fr 1fr 1.3fr; gap:14px; margin-top:14px}
+  @media (max-width:900px){ .strip{grid-template-columns:1fr} }
+  .stat .v{font-family:"IBM Plex Mono",monospace; font-size:22px; font-weight:600}
+  .stat .l{font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-top:2px}
+  .bars{display:flex; gap:12px}
+  .barwrap{flex:1}
+  .bar{height:8px; border-radius:999px; background:var(--panel-2); border:1px solid var(--hair); overflow:hidden; margin-top:4px}
+  .bar .f{height:100%; width:0%}
+  .lead{display:flex; flex-direction:column; gap:4px}
+  .lead .row{display:grid; grid-template-columns:16px 1fr auto; gap:8px; align-items:center; font-family:"IBM Plex Mono",monospace; font-size:12px}
+  .lead .chip{width:9px; height:9px; border-radius:2px}
+  .lead .dead{color:var(--pain)}
+  .log{font-family:"IBM Plex Mono",monospace; font-size:12.5px; color:var(--ink); margin-top:12px; min-height:1.5em; line-height:1.5}
+  .log .a{color:var(--gold)} .log .b{color:var(--pain)} .log .g{color:var(--dopa)}
+  .transport{display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; background:var(--panel-2); border:1px solid var(--hair); border-radius:12px; padding:12px 14px}
+  .transport button{appearance:none; border:1px solid var(--hair); background:var(--panel); color:var(--ink); font-family:inherit; font-weight:700; border-radius:8px; padding:9px 14px; cursor:pointer}
+  .transport .play{background:var(--dopa); color:var(--ground); border-color:transparent; box-shadow:var(--glow)}
+  .transport button:hover{border-color:var(--kc)} .transport button:focus-visible{outline:2px solid var(--kc); outline-offset:2px}
+  .transport label{font-size:11px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+  input[type=range]{accent-color:var(--kc); cursor:pointer}
+  .foot{color:var(--muted); font-size:12px; margin-top:16px; line-height:1.6} .foot b{color:var(--ink)} .foot .dot{color:var(--faint); margin:0 6px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="brand"><h1><span class="fly">🪰</span>♠️ FlyPoker <span style="font-size:.5em;color:var(--kc);vertical-align:middle">3D</span></h1></div>
+      <div class="tag">Six fruit-fly brains play Texas Hold'em — <b>one at a time</b>, street by street. Watch each fly's mushroom body light up as it acts pre-flop, on the flop, turn and river. Win → dopamine, lose → pain (PPL1). Go broke → die, and a fresh fly buys the seat.</div>
+    </div>
+    <div class="hud" id="hud">hand 1</div>
+  </header>
+
+  <div class="grid">
+    <section class="panel">
+      <h2>The table</h2>
+      <canvas id="table" width="760" height="600" aria-label="3D poker table of flies"></canvas>
+    </section>
+    <section class="panel">
+      <h2>The brain · <span id="focus-name" style="color:var(--kc)">—</span> <span id="focus-what" style="color:var(--muted);font-weight:400">is thinking…</span></h2>
+      <canvas id="brain" width="520" height="380" aria-label="The acting fly's mushroom body firing"></canvas>
+      <div class="log" id="brainlog">its visible cards set a hand-strength cue → a sparse Kenyon-cell code → fold / call / raise.</div>
+    </section>
+  </div>
+
+  <div class="strip">
+    <section class="panel">
+      <h2>Feelings across the table</h2>
+      <div class="bars">
+        <div class="barwrap"><span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">dopamine (won)</span><div class="bar"><span class="f" id="dopa-bar" style="background:var(--dopa)"></span></div></div>
+        <div class="barwrap"><span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">pain (lost)</span><div class="bar"><span class="f" id="pain-bar" style="background:var(--pain)"></span></div></div>
+      </div>
+      <div style="display:flex; gap:16px; margin-top:14px">
+        <div class="stat"><div class="v mono" id="s-hands">1</div><div class="l">hands played</div></div>
+        <div class="stat"><div class="v mono" id="s-deaths" style="color:var(--pain)">0</div><div class="l">flies died</div></div>
+      </div>
+    </section>
+    <section class="panel">
+      <h2>Chip leaderboard</h2>
+      <div class="lead" id="lead"></div>
+    </section>
+    <section class="panel">
+      <h2>What the leader learned</h2>
+      <canvas id="policy" width="360" height="150" aria-label="Learned fold/call/raise policy"></canvas>
+    </section>
+  </div>
+
+  <div class="log" id="tablelog">shuffling up…</div>
+
+  <div class="transport">
+    <button id="play" class="play" aria-label="Play or pause">⏸ Pause</button>
+    <button id="step">Step ▸</button>
+    <label for="speed">Speed</label>
+    <input id="speed" type="range" min="0.5" max="6" step="0.5" value="2" style="width:150px" aria-label="Beats per second">
+    <span class="mono" id="rps" style="color:var(--muted)">2 steps/s</span>
+  </div>
+
+  <p class="foot">
+    <b>How it works.</b> Every hand each fly antes and gets 2 hole cards. Then across four streets — <b>pre-flop, flop, turn, river</b> — the board is dealt out and, <b>one fly at a time</b>, each still-in fly's <b style="color:var(--kc)">mushroom body</b> reads its <i>currently visible</i> hand strength into a sparse Kenyon-cell code and picks <b>fold / call / raise</b>. Survivors show down; best 5-of-7 hand wins the pot. The chips won or lost fire <b style="color:var(--dopa)">dopamine</b> or <b style="color:var(--pain)">pain</b> and rewrite the KC→action weights across every decision that fly made — so flies learn to fold weak boards and press strong ones, with no rules given.
+    <span class="dot">·</span>Real deck, streets &amp; hand rankings; simplified fixed-bet action. A behavioral model of the FlyGambler connectome brain — for fun, not gambling advice.
+  </p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const $=s=>document.querySelector(s);
+  const css=k=>getComputedStyle(document.documentElement).getPropertyValue(k).trim();
+  const COL={dopa:css("--dopa"),pain:css("--pain"),kc:css("--kc"),gold:css("--gold"),mood:css("--mood"),
+    ink:css("--ink"),muted:css("--muted"),hair:css("--hair"),faint:css("--faint"),panel:css("--panel-2")};
+
+  // ================= poker engine =================
+  const RANKS=[2,3,4,5,6,7,8,9,10,11,12,13,14], SUITS=[0,1,2,3];
+  const RCHAR={10:"10",11:"J",12:"Q",13:"K",14:"A"}, SCHAR="♣♦♥♠";
+  const rc=r=>RCHAR[r]||(""+r);
+  let RNG=Math.random;
+  function shuffled(){ const d=[]; for(const r of RANKS)for(const s of SUITS)d.push({r,s});
+    for(let i=d.length-1;i>0;i--){const j=(RNG()*(i+1))|0; const t=d[i];d[i]=d[j];d[j]=t;} return d; }
+  function straightHigh(rset){ const s=new Set(rset); let w=0; if([14,2,3,4,5].every(x=>s.has(x)))w=5;
+    for(let hi=14;hi>=6;hi--){ let ok=true; for(let i=0;i<5;i++) if(!s.has(hi-i)){ok=false;break;} if(ok)return hi; } return w; }
+  function pack(cat,tb){ tb=tb.concat([0,0,0,0,0]).slice(0,5); let v=cat; for(const k of tb) v=v*15+k; return v; }
+  function score5(cards){
+    const ranks=cards.map(c=>c.r).sort((a,b)=>b-a); const suits=cards.map(c=>c.s);
+    const counts={}; for(const r of ranks) counts[r]=(counts[r]||0)+1;
+    const byc=Object.keys(counts).map(k=>[+k,counts[k]]).sort((a,b)=> b[1]-a[1]||b[0]-a[0]);
+    const kick=byc.map(x=>x[0]), shape=byc.map(x=>x[1]);
+    const isF=new Set(suits).size===1;
+    const sh=(Object.keys(counts).length===5)?straightHigh(Object.keys(counts).map(Number)):0;
+    if(isF&&sh) return pack(8,[sh]);
+    if(shape[0]===4) return pack(7,kick);
+    if(shape[0]===3&&shape[1]===2) return pack(6,kick);
+    if(isF) return pack(5,ranks);
+    if(sh) return pack(4,[sh]);
+    if(shape[0]===3) return pack(3,kick);
+    if(shape[0]===2&&shape[1]===2) return pack(2,kick);
+    if(shape[0]===2) return pack(1,kick);
+    return pack(0,ranks);
+  }
+  function bestScore(cards){ const n=cards.length; if(n===5)return score5(cards);
+    let best=-1; const pick=[]; (function combo(start){ if(pick.length===5){ const sc=score5(pick.map(i=>cards[i])); if(sc>best)best=sc; return; }
+      for(let i=start;i<n;i++){ pick.push(i); combo(i+1); pick.pop(); } })(0); return best; }
+  const MINP=pack(0,[7,5,4,3,2]), MAXP=pack(8,[14]);
+  const strengthPost=sc=>Math.max(0,Math.min(1,(sc-MINP)/(MAXP-MINP)));
+  function preflopStrength(a,b){ const hi=Math.max(a.r,b.r), lo=Math.min(a.r,b.r); let s;
+    if(a.r===b.r){ s=0.52+(a.r-2)/12*0.46; }
+    else { s=((hi-2)/12)*0.5+((lo-2)/12)*0.2; if(a.s===b.s)s+=0.06; const gap=hi-lo; if(gap===1)s+=0.05; else if(gap<=3)s+=0.02; }
+    return Math.max(0.03,Math.min(0.97,s)); }
+  function strengthFrom(cards){ if(cards.length<2)return 0; if(cards.length<5)return preflopStrength(cards[0],cards[1]); return strengthPost(bestScore(cards)); }
+
+  // ================= the fly brain =================
+  const NKC=256, KCA=13, NF=8, ACTIONS=["fold","call","raise"];
+  function randn(){ let u=0,v=0; while(!u)u=RNG(); while(!v)v=RNG(); return Math.sqrt(-2*Math.log(u))*Math.cos(6.283185*v); }
+  let flyCounter=0;
+  function makeFly(seat){ const Win=new Float64Array(NKC*NF); for(let i=0;i<Win.length;i++)Win[i]=randn();
+    return {id:flyCounter++, seat, name:NAMES[seat%NAMES.length], Win,
+      w:[new Float64Array(NKC),new Float64Array(NKC),new Float64Array(NKC)], chips:0, alive:true, hands:0, wins:0, mood:0}; }
+  const feats=(fly,hs,ctx)=>[1,hs,hs*hs,hs*hs*hs, ctx.potOdds, ctx.nActive/ctx.nSeats, Math.min(1,fly.chips/ctx.start), hs>0.5?1:0];
+  function kcCode(fly,f){ const drive=new Float64Array(NKC);
+    for(let k=0;k<NKC;k++){ let s=0; const base=k*NF; for(let j=0;j<NF;j++) s+=fly.Win[base+j]*f[j]; drive[k]=s; }
+    return Array.from(drive.keys()).sort((a,b)=>drive[b]-drive[a]).slice(0,KCA); }
+  const actValues=(fly,h)=>{ const Q=[0,0,0]; for(const k of h){Q[0]+=fly.w[0][k];Q[1]+=fly.w[1][k];Q[2]+=fly.w[2][k];} return Q; };
+  const LR=0.12, TEMP=0.35, EXP=0.03;
+  function decide(fly,hs,ctx){ const h=kcCode(fly,feats(fly,hs,ctx)); const Q=actValues(fly,h);
+    let z=Q.map(q=>q/TEMP); const m=Math.max(...z); z=z.map(q=>Math.exp(Math.max(-30,q-m)));
+    const sum=z.reduce((a,b)=>a+b,0); const p=z.map(q=>EXP/3+(1-EXP)*q/sum); const ps=p.reduce((a,b)=>a+b,0);
+    let r=RNG()*ps, a=0; for(;a<3;a++){ r-=p[a]; if(r<=0)break; } if(a>2)a=2; return {a,h,Q,hs}; }
+  function learnStep(fly,h,Q,a,reward){ const rpe=reward-Q[a]; const step=(LR/KCA)*rpe;
+    const wa=fly.w[a]; for(const k of h) wa[k]+=step; return rpe; }
+
+  // ================= turn-by-turn, street-by-street table =================
+  const NAMES=["Buzz","Zip","Dart","Gnat","Midge","Vex"];
+  const NSEATS=6, START=100, ANTE=1, BET=4, CALL=BET, RAISE=2*BET;
+  const STREETS=["PRE-FLOP","FLOP","TURN","RIVER"], SHOWN=[0,3,4,5];
+  let seats=[]; for(let i=0;i<NSEATS;i++){ const f=makeFly(i); f.chips=START; seats[i]=f; }
+  let handNo=0, deaths=0, button=0, dopaEMA=0, painEMA=0;
+  let hand=null, phase="reveal", focusSeat=0, actIdx=0;
+  let NOW=0, fireT=-9999, danT=-9999;
+
+  function activeCount(){ return NSEATS - hand.folded.size; }
+  function startHand(){
+    handNo++; button=(button+1)%NSEATS;
+    const newborn=[];
+    for(let i=0;i<NSEATS;i++){ if(seats[i].chips<ANTE){ deaths++; const f=makeFly(i); f.chips=START; seats[i]=f; newborn.push(i);} }
+    const deck=shuffled(); const community=[deck[0],deck[1],deck[2],deck[3],deck[4]]; let di=5;
+    const holes={},committed={},decisions={}; let pot=0;
+    for(let i=0;i<NSEATS;i++){ holes[i]=[deck[di++],deck[di++]]; seats[i].chips-=ANTE; committed[i]=ANTE; pot+=ANTE; decisions[i]=[]; }
+    const order=[]; for(let k=1;k<=NSEATS;k++) order.push((button+k)%NSEATS);
+    hand={no:handNo, community, holes, committed, decisions, pot, folded:new Set(), street:0, shown:0,
+      order, winners:[], deltas:{}, newborn, revT:[-1e9,-1e9,-1e9,-1e9,-1e9], lastA:{}, lastHS:{}};
+    enterStreet(0);
+  }
+  function enterStreet(s){ hand.street=s; const ns=SHOWN[s];
+    for(let k=hand.shown;k<ns;k++) hand.revT[k]=NOW; hand.shown=ns;
+    phase="reveal"; focusSeat=hand.order.find(i=>!hand.folded.has(i)); }
+  function doTurn(seat){
+    const vis=hand.holes[seat].concat(hand.community.slice(0,hand.shown));
+    const hs=strengthFrom(vis);
+    const ctx={potOdds:CALL/(hand.pot+CALL), nActive:activeCount(), nSeats:NSEATS, start:START};
+    const d=decide(seats[seat], hs, ctx);
+    if(d.a===0){ hand.folded.add(seat); }
+    else { const need=d.a===2?RAISE:CALL; const put=Math.max(0,Math.min(need, seats[seat].chips));
+      seats[seat].chips-=put; hand.committed[seat]+=put; hand.pot+=put; }
+    hand.decisions[seat].push({h:d.h,Q:d.Q,a:d.a}); hand.lastA[seat]=d.a; hand.lastHS[seat]=hs;
+    focusSeat=seat; fireT=NOW;
+  }
+  function doShowdown(){
+    hand.shown=5;
+    const live=[]; for(let i=0;i<NSEATS;i++) if(!hand.folded.has(i)) live.push(i);
+    let winners;
+    if(live.length<=1){ winners=live.slice(); }
+    else { let best=-1; const sc={}; for(const i of live){ sc[i]=bestScore(hand.holes[i].concat(hand.community)); if(sc[i]>best)best=sc[i]; }
+      winners=live.filter(i=>sc[i]===best); }
+    const share=winners.length?hand.pot/winners.length:0;
+    for(const i of winners) seats[i].chips+=share;
+    for(let i=0;i<NSEATS;i++) hand.deltas[i]=(winners.includes(i)?share:0)-hand.committed[i];
+    hand.winners=winners; hand.share=share; danT=NOW; focusSeat=winners.length?winners[0]:hand.order[0];
+  }
+  function doSettle(){
+    let dsum=0,psum=0;
+    for(let i=0;i<NSEATS;i++){ const dl=hand.deltas[i], decs=hand.decisions[i]; const fly=seats[i];
+      for(const d of decs){ learnStep(fly,d.h,d.Q,d.a, dl/BET); }
+      if(decs.length) fly.hands++;
+      if(hand.winners.includes(i)) fly.wins++;
+      fly.mood=Math.max(-4,Math.min(3, 0.96*fly.mood+0.15*(dl<0?dl/BET:0.6*dl/BET)));
+      dsum+=Math.max(0,dl); psum+=Math.max(0,-dl); }
+    dopaEMA=0.85*dopaEMA+0.15*(dsum/NSEATS/BET); painEMA=0.85*painEMA+0.15*(psum/NSEATS/BET);
+    updateHUD();
+  }
+  function beat(){
+    if(!hand){ startHand(); return; }
+    if(phase==="reveal"){ actIdx=0; phase="turn"; return; }
+    if(phase==="turn"){
+      while(actIdx<hand.order.length && hand.folded.has(hand.order[actIdx])) actIdx++;
+      if(actIdx<hand.order.length){ doTurn(hand.order[actIdx]); actIdx++;
+        if(activeCount()<=1){ phase="showdown"; } return; }
+      const ns=hand.street+1;
+      if(ns>3 || activeCount()<=1){ phase="showdown"; } else { enterStreet(ns); }
+      return;
+    }
+    if(phase==="showdown"){ doShowdown(); phase="settle"; return; }
+    doSettle(); startHand();
+  }
+
+  // ================= 3D perspective rendering =================
+  function fit(cv,cssH){ const dpr=Math.min(devicePixelRatio||1,2), w=cv.clientWidth||cv.parentElement.clientWidth;
+    cv.width=Math.round(w*dpr); cv.height=Math.round(cssH*dpr); cv.style.height=cssH+"px";
+    const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,w,h:cssH}; }
+  function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+
+  let TB={};
+  function setGeom(w,h){ TB={cx:w/2, cy:h*0.44, rx:w*0.40, ry:h*0.245, w, h}; }
+  const seatAngle=i=>Math.PI/2 + i*(2*Math.PI/NSEATS);
+  function project(ang,radial){ const u=Math.cos(ang), v=Math.sin(ang);
+    const x=TB.cx+TB.rx*radial*u, y=TB.cy+TB.ry*radial*v;
+    const depth=(v+1)/2; return {x,y,depth,scale:0.62+0.55*depth}; }
+
+  function drawTable3D(ctx){
+    const {cx,cy,rx,ry,h}=TB;
+    ctx.save(); ctx.filter="blur(14px)"; ctx.fillStyle="rgba(0,0,0,0.55)";
+    ctx.beginPath(); ctx.ellipse(cx,cy+ry*0.34,rx*1.16,ry*1.24,0,0,7); ctx.fill(); ctx.restore();
+    const edgeH=Math.min(30,h*0.05);
+    ctx.fillStyle="#241017"; ctx.beginPath(); ctx.ellipse(cx,cy+edgeH,rx*1.10,ry*1.10,0,0,7); ctx.fill();
+    const rg=ctx.createLinearGradient(0,cy-ry,0,cy+ry);
+    rg.addColorStop(0,"#5a2b3a"); rg.addColorStop(.5,"#3a1a24"); rg.addColorStop(1,"#25101a");
+    ctx.fillStyle=rg; ctx.beginPath(); ctx.ellipse(cx,cy,rx*1.10,ry*1.10,0,0,7); ctx.fill();
+    ctx.lineWidth=2; ctx.strokeStyle="rgba(245,196,81,0.25)"; ctx.stroke();
+    const fg=ctx.createRadialGradient(cx,cy-ry*0.2,ry*0.2,cx,cy,rx);
+    fg.addColorStop(0,"#1c6b4b"); fg.addColorStop(.7,"#12503a"); fg.addColorStop(1,"#0c3327");
+    ctx.fillStyle=fg; ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,7); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx,cy,rx,ry,0,0,7); ctx.clip();
+    const vg=ctx.createRadialGradient(cx,cy,ry*0.5,cx,cy,rx); vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(0,0,0,0.45)");
+    ctx.fillStyle=vg; ctx.fillRect(cx-rx,cy-ry,rx*2,ry*2); ctx.restore();
+    ctx.lineWidth=1.5; ctx.strokeStyle="rgba(53,224,161,0.28)"; ctx.beginPath(); ctx.ellipse(cx,cy,rx*0.9,ry*0.9,0,0,7); ctx.stroke();
+  }
+  function drawCard3D(ctx,x,y,s,card,faceUp,pop){
+    pop=pop==null?1:pop; const w=26*s*pop, hh=36*s*pop; const X=x-w/2, Y=y-hh/2;
+    ctx.save();
+    ctx.fillStyle="rgba(0,0,0,0.4)"; rr(ctx,X+2.5*s,Y+3*s,w,hh,4*s); ctx.fill();
+    if(!faceUp){ const bg=ctx.createLinearGradient(X,Y,X,Y+hh); bg.addColorStop(0,"#3a5aa0"); bg.addColorStop(1,"#243a68");
+      rr(ctx,X,Y,w,hh,4*s); ctx.fillStyle=bg; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,0.25)"; ctx.lineWidth=1; ctx.stroke();
+      ctx.strokeStyle="rgba(255,255,255,0.18)"; for(let k=-1;k<=1;k++){ ctx.beginPath(); ctx.moveTo(X+w/2+k*4*s,Y+4*s); ctx.lineTo(X+w/2+k*4*s,Y+hh-4*s); ctx.stroke(); } ctx.restore(); return; }
+    const g=ctx.createLinearGradient(X,Y,X,Y+hh); g.addColorStop(0,"#ffffff"); g.addColorStop(1,"#dfe6f0");
+    rr(ctx,X,Y,w,hh,4*s); ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle="#aab4c6"; ctx.lineWidth=1; ctx.stroke();
+    const red=(card.s===1||card.s===2); ctx.fillStyle=red?"#d1495b":"#182234";
+    ctx.textAlign="left"; ctx.textBaseline="top"; ctx.font="bold "+(12*s)+"px 'IBM Plex Mono',monospace"; ctx.fillText(rc(card.r),X+3*s,Y+2*s);
+    ctx.font=(15*s)+"px system-ui"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(SCHAR[card.s],x,y+2*s);
+    ctx.restore();
+  }
+  function chipStack(ctx,x,y,amount,s){ const n=Math.max(1,Math.min(11,Math.round(Math.sqrt(Math.max(0,amount))/2))); const rx=9*s, ry=3.4*s, dh=ry*1.4;
+    const tier=amount>140?"#f5c451":amount>70?"#4aa3ff":amount>25?"#35e0a1":"#ff6b81";
+    for(let k=0;k<n;k++){ const yy=y-k*dh; ctx.beginPath(); ctx.ellipse(x,yy,rx,ry,0,0,7); ctx.fillStyle=k%2?tier:"#e9eef6"; ctx.fill();
+      ctx.strokeStyle="rgba(0,0,0,0.35)"; ctx.lineWidth=1; ctx.stroke(); }
+    ctx.beginPath(); ctx.ellipse(x,y-n*dh,rx,ry,0,0,7); ctx.fillStyle=tier; ctx.fill(); ctx.strokeStyle="rgba(255,255,255,0.5)"; ctx.stroke();
+  }
+  function drawFly3D(ctx,x,y,s,tint,alpha){
+    ctx.save();
+    ctx.fillStyle="rgba(0,0,0,0.35)"; ctx.beginPath(); ctx.ellipse(x,y+13*s,11*s,4*s,0,0,7); ctx.fill();
+    ctx.translate(x,y); ctx.scale(s,s); ctx.globalAlpha=alpha;
+    const wing=reduce?0:Math.sin(NOW/40+x)*0.5;
+    ctx.save(); ctx.globalAlpha=alpha*0.4; ctx.fillStyle="#e6eeff";
+    for(const sg of[-1,1]){ctx.save();ctx.rotate(sg*(0.5+wing));ctx.beginPath();ctx.ellipse(0,-9,5,11,0,0,7);ctx.fill();ctx.restore();}
+    ctx.restore();
+    ctx.shadowColor=tint; ctx.shadowBlur=13; ctx.fillStyle="#212b3d"; ctx.beginPath(); ctx.ellipse(0,3,8,11,0,0,7); ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle="#2b3650"; ctx.beginPath(); ctx.arc(0,-9,6,0,7); ctx.fill();
+    ctx.fillStyle="#ff5a6e"; for(const sg of[-1,1]){ctx.beginPath();ctx.arc(sg*3,-10,2.6,0,7);ctx.fill();}
+    ctx.restore();
+  }
+
+  function drawTable(){
+    const cv=$("#table"); const {ctx,w,h}=fit(cv,Math.max(460,cv.clientWidth*0.8)); ctx.clearRect(0,0,w,h); setGeom(w,h);
+    const H=hand; drawTable3D(ctx);
+    const showdown=(phase==="showdown"||phase==="settle");
+    ctx.textAlign="center"; ctx.textBaseline="top";
+    ctx.fillStyle="rgba(0,0,0,0.35)"; rr(ctx,w/2-70,10,140,26,13); ctx.fill();
+    ctx.fillStyle=showdown?COL.gold:COL.kc; ctx.font="700 14px 'IBM Plex Mono',monospace";
+    ctx.fillText(showdown?"SHOWDOWN":STREETS[H?H.street:0], w/2, 15);
+    const ccS=1.0, cw=26*ccS+6; const cx0=TB.cx-2*cw;
+    for(let k=0;k<5;k++){ const shown=H&&k<H.shown; const pop=shown?Math.min(1,(NOW-H.revT[k])/240):1;
+      const e=pop<1?(1-Math.pow(1-pop,3)):1;
+      if(shown) drawCard3D(ctx,cx0+k*cw,TB.cy-6, ccS*(0.6+0.4*e), H.community[k], true, 1);
+      else { ctx.globalAlpha=0.5; drawCard3D(ctx,cx0+k*cw,TB.cy-6,ccS,{r:2,s:0},false,1); ctx.globalAlpha=1; } }
+    if(H){ chipStack(ctx,TB.cx,TB.cy+30,H.pot,0.9);
+      ctx.fillStyle=COL.gold; ctx.font="600 15px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="top";
+      ctx.fillText("POT $"+Math.round(H.pot), TB.cx+42, TB.cy+22); }
+    const list=[]; for(let i=0;i<NSEATS;i++){ const p=project(seatAngle(i),1.16); list.push({i,p}); }
+    list.sort((a,b)=>a.p.depth-b.p.depth);
+    for(const {i,p} of list){
+      const fly=seats[i], s=p.scale; const folded=H&&H.folded.has(i);
+      const acted=H&&H.decisions[i]&&H.decisions[i].length>0;
+      const isFocus=i===focusSeat, isNext=(phase==="turn"&&actIdx<H.order.length&&H.order[actIdx]===i);
+      const won=showdown&&H.winners.includes(i), lost=showdown&&!won&&!folded&&acted;
+      let tint=COL.mood; if(won)tint=COL.dopa; else if(lost||folded)tint=COL.pain; else if(isFocus)tint=COL.kc;
+      if(isFocus&&!showdown){ const pulse=0.5+0.5*Math.sin(NOW/180); ctx.save(); ctx.globalAlpha=0.35+0.35*pulse;
+        ctx.strokeStyle=COL.kc; ctx.lineWidth=2.5*s; ctx.beginPath(); ctx.ellipse(p.x,p.y+12*s,26*s,10*s,0,0,7); ctx.stroke(); ctx.restore(); }
+      if(won){ ctx.save(); ctx.globalAlpha=0.5; ctx.strokeStyle=COL.gold; ctx.lineWidth=3*s; ctx.beginPath(); ctx.ellipse(p.x,p.y+12*s,28*s,11*s,0,0,7); ctx.stroke(); ctx.restore(); }
+      const cp=project(seatAngle(i),0.74); const cs=cp.scale; const reveal=(showdown&&!folded)||isFocus||(acted&&!folded);
+      if(H){ const gap=13*cs; drawCard3D(ctx,cp.x-gap,cp.y,cs*0.85,H.holes[i][0],reveal,1);
+        drawCard3D(ctx,cp.x+gap,cp.y,cs*0.85,H.holes[i][1],reveal,1); }
+      drawFly3D(ctx,p.x,p.y-6*s,s*1.15, tint, folded?0.35:1);
+      chipStack(ctx, p.x+22*s, p.y+8*s, fly.chips, s*0.8);
+      ctx.textAlign="center"; ctx.textBaseline="top";
+      ctx.fillStyle=isFocus?COL.kc:COL.muted; ctx.font=(11*s)+"px 'IBM Plex Mono',monospace"; ctx.fillText(fly.name, p.x, p.y-40*s);
+      ctx.fillStyle=fly.chips<=5?COL.pain:COL.ink; ctx.font="600 "+(11*s)+"px 'IBM Plex Mono',monospace"; ctx.fillText("$"+Math.round(fly.chips), p.x, p.y+22*s);
+      const a=H?H.lastA[i]:undefined;
+      if(folded){ ctx.fillStyle=COL.pain; ctx.font=(10*s)+"px 'IBM Plex Mono',monospace"; ctx.fillText("FOLD", p.x, p.y-28*s); }
+      else if(a!==undefined){ const lbl=["FOLD","CALL","RAISE"][a]; ctx.fillStyle=a===2?COL.gold:COL.kc; ctx.font="700 "+(10*s)+"px 'IBM Plex Mono',monospace"; ctx.fillText(lbl, p.x, p.y-28*s); }
+      else if(isNext){ ctx.fillStyle=COL.kc; ctx.font=(13*s)+"px 'IBM Plex Mono',monospace"; ctx.fillText("…", p.x, p.y-30*s); }
+      if(H&&H.newborn.includes(i)){ ctx.fillStyle=COL.dopa; ctx.font=(10*s)+"px 'IBM Plex Mono',monospace"; ctx.fillText("✨new", p.x, p.y+34*s); }
+      if(i===button){ const bp=project(seatAngle(i),0.96); ctx.fillStyle="#f2f4f8"; ctx.beginPath(); ctx.arc(bp.x,bp.y,7*cs,0,7); ctx.fill(); ctx.fillStyle="#15202f"; ctx.font="bold "+(9*cs)+"px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("D",bp.x,bp.y+1); }
+    }
+    if(showdown&&H&&H.winners.length){ ctx.fillStyle=COL.gold; ctx.font="600 14px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="top";
+      ctx.fillText("★ "+H.winners.map(i=>seats[i].name).join(", ")+" win $"+Math.round(H.pot), w/2, h-22); }
+  }
+
+  // ---------- brain panel ----------
+  let kcPts=null;
+  function node(ctx,x,y,label,color,inten){ ctx.beginPath();ctx.arc(x,y,10,0,7);ctx.globalAlpha=0.15+0.85*inten;ctx.fillStyle=color;
+    if(inten>0.5){ctx.shadowColor=color;ctx.shadowBlur=14;} ctx.fill();ctx.globalAlpha=1;ctx.shadowBlur=0;
+    ctx.fillStyle=COL.muted;ctx.font="9px 'IBM Plex Mono',monospace";ctx.textAlign="center";ctx.fillText(label,x,y+20); }
+  function drawBrain(){
+    const cv=$("#brain"); const {ctx,w,h}=fit(cv,Math.max(300,cv.clientWidth*0.72)); ctx.clearRect(0,0,w,h);
+    const H=hand; const decs=H?H.decisions[focusSeat]:null; const sr=decs&&decs.length?decs[decs.length-1]:null;
+    const inX=w*0.10, mbX=w*0.74;
+    ctx.font="10px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.fillStyle=COL.muted;
+    ctx.fillText("cards",inX,h*0.06); ctx.fillText("KENYON CELLS",w*0.44,h*0.06); ctx.fillText("ACTION",mbX,h*0.06);
+    if(!kcPts||kcPts.w!==w){ const pts=[],cols=22,rows=Math.ceil(NKC/cols),x0=w*0.24,x1=w*0.62,y0=h*0.13,y1=h*0.9;
+      for(let i=0;i<NKC;i++){const c=i%cols,r2=(i/cols)|0; pts.push([x0+(x1-x0)*(c/(cols-1)),y0+(y1-y0)*(r2/(rows-1))]);} kcPts={w,pts}; }
+    const active=new Set(sr?sr.h:[]);
+    const sweep=reduce?0.5:(NOW/300)%1, sx=w*0.24+(mbX-w*0.24)*sweep, act=sr?Math.max(0.12,1-((NOW-fireT)/700)):0.12;
+    const hs=H?(H.lastHS[focusSeat]||0):0;
+    ctx.beginPath(); ctx.arc(inX,h*0.5,6+9*hs,0,7); ctx.globalAlpha=0.3+0.6*hs; ctx.fillStyle=COL.kc; ctx.shadowColor=COL.kc; ctx.shadowBlur=10; ctx.fill(); ctx.globalAlpha=1; ctx.shadowBlur=0;
+    ctx.fillStyle=COL.muted; ctx.font="9px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.fillText("str "+hs.toFixed(2),inX,h*0.5+18);
+    for(let i=0;i<kcPts.pts.length;i++){ const on=active.has(i), p=kcPts.pts[i];
+      const flash=on?Math.max(0,1-Math.abs(p[0]-sx)/(w*0.06))*act:0;
+      ctx.beginPath(); ctx.arc(p[0],p[1], on?2.2+flash*2.2:1.2,0,7);
+      if(on){ctx.shadowColor=COL.kc;ctx.shadowBlur=4+flash*10;ctx.fillStyle=COL.kc;ctx.globalAlpha=0.5+0.5*flash;}
+      else{ctx.shadowBlur=0;ctx.fillStyle=COL.faint;ctx.globalAlpha=1;} ctx.fill(); }
+    ctx.globalAlpha=1; ctx.shadowBlur=0;
+    const Q=sr?sr.Q:[0,0,0]; const mn=Math.min(...Q,0), mx=Math.max(...Q,0.001); const chosen=sr?sr.a:-1;
+    const labels=["fold","call","raise"], acol=[COL.muted,COL.kc,COL.gold]; const bx=mbX-14, bw=30;
+    for(let a=0;a<3;a++){ const by=h*(0.15+a*0.26), bh=h*0.2; const frac=(Q[a]-mn)/(mx-mn+1e-9);
+      ctx.fillStyle=COL.panel; ctx.strokeStyle=COL.hair; rr(ctx,bx,by,bw,bh,3); ctx.fill(); ctx.stroke();
+      if(a===chosen){ctx.shadowColor=acol[a];ctx.shadowBlur=12;} ctx.fillStyle=acol[a]; rr(ctx,bx,by,Math.max(2,bw*frac),bh,3); ctx.fill(); ctx.shadowBlur=0;
+      ctx.fillStyle=a===chosen?COL.ink:COL.muted; ctx.font=(a===chosen?"700 ":"")+"9px 'IBM Plex Mono',monospace"; ctx.textAlign="left"; ctx.fillText(labels[a],bx+bw+6,by+bh*0.5+3); ctx.textAlign="center"; }
+    const showdown=(phase==="showdown"||phase==="settle");
+    const won=showdown&&H&&H.winners.includes(focusSeat), lost=showdown&&H&&!won&&(H.decisions[focusSeat]||[]).length>0&&!H.folded.has(focusSeat);
+    node(ctx,w*0.93,h*0.28,"PAM",COL.dopa,won?1:0.12); node(ctx,w*0.93,h*0.7,"PPL1",COL.pain,lost?1:0.12);
+    const dage=NOW-danT; if(dage<600&&(won||lost)){ const ny=won?h*0.28:h*0.7,col=won?COL.dopa:COL.pain,q=dage/600;
+      ctx.save();ctx.globalAlpha=(1-q)*0.85;ctx.strokeStyle=col;ctx.lineWidth=2;ctx.beginPath();ctx.arc(w*0.93,ny,10+q*22,0,7);ctx.stroke();ctx.restore(); }
+  }
+
+  function drawPolicy(){
+    const cv=$("#policy"); const {ctx,w,h}=fit(cv,140); ctx.clearRect(0,0,w,h);
+    const leader=seats.reduce((a,b)=>b.chips>a.chips?b:a,seats[0]);
+    const xs=[]; for(let i=0;i<12;i++)xs.push(0.03+i*0.085);
+    const ctx0={potOdds:CALL/(10+CALL),nActive:NSEATS,nSeats:NSEATS,start:START};
+    const P=xs.map(hs=>{ const cnt=[0,0,0]; for(let n=0;n<40;n++)cnt[decide(leader,hs,ctx0).a]++; return cnt.map(c=>c/40); });
+    const padL=6,padR=6,padB=16,iw=w-padL-padR,ih=h-padB-4, X=i=>padL+iw*(i/(xs.length-1)), cols=[COL.muted,COL.kc,COL.gold];
+    let acc=P.map(()=>0);
+    for(let a=0;a<3;a++){ ctx.beginPath();
+      for(let i=0;i<xs.length;i++){ const y=4+ih*(1-acc[i]); i?ctx.lineTo(X(i),y):ctx.moveTo(X(i),y); }
+      for(let i=xs.length-1;i>=0;i--){ ctx.lineTo(X(i),4+ih*(1-(acc[i]+P[i][a]))); }
+      ctx.closePath(); ctx.globalAlpha=0.9; ctx.fillStyle=cols[a]; ctx.fill(); ctx.globalAlpha=1;
+      for(let i=0;i<xs.length;i++) acc[i]+=P[i][a]; }
+    ctx.fillStyle=COL.muted; ctx.font="9px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.fillText("weak → strong hand · "+leader.name, w/2, h-4);
+  }
+
+  function updateHUD(){
+    const st=hand?(phase==="showdown"||phase==="settle"?"showdown":STREETS[hand.street]):"—";
+    $("#hud").textContent="hand "+handNo+" · "+st;
+    $("#s-hands").textContent=handNo; $("#s-deaths").textContent=deaths;
+    $("#dopa-bar").style.width=Math.round(Math.min(1,dopaEMA/2)*100)+"%";
+    $("#pain-bar").style.width=Math.round(Math.min(1,painEMA/2)*100)+"%";
+    $("#focus-name").textContent=seats[focusSeat].name;
+    const showdown=(phase==="showdown"||phase==="settle");
+    $("#focus-what").textContent = showdown ? (hand&&hand.winners.includes(focusSeat)?"won the pot":"lost the hand")
+      : (hand&&hand.folded.has(focusSeat)?"folded":"is deciding…");
+    const order=[...seats].sort((a,b)=>b.chips-a.chips); const box=$("#lead"); box.innerHTML="";
+    order.forEach(f=>{ const d=document.createElement("div"); d.className="row";
+      d.innerHTML='<span class="chip" style="background:'+(f.chips<=5?COL.pain:COL.dopa)+'"></span><span'+(f.chips<=5?' class="dead"':'')+'>'+f.name+'</span><span>$'+Math.round(f.chips)+'</span>'; box.appendChild(d); });
+    if(hand&&showdown){ const H=hand; const wt=H.winners.length?('<span class="a">'+H.winners.map(i=>seats[i].name).join(", ")+'</span> win $'+Math.round(H.pot)):'chopped';
+      const dt=H.newborn.length?(' · <span class="b">'+H.newborn.length+' busted → new fly</span>'):'';
+      $("#tablelog").innerHTML="hand "+H.no+": board "+H.community.map(c=>rc(c.r)+SCHAR[c.s]).join(" ")+" — "+wt+dt; }
+  }
+
+  let playing=true, lastT=0, acc=0;
+  function tick(ts){ NOW=ts; const dt=Math.min(0.1,(ts-lastT)/1000); lastT=ts;
+    if(playing){ const bps=+$("#speed").value; acc+=dt*bps; let n=0; while(acc>=1&&n<50){ beat(); acc-=1; n++; } if(n)updateHUD(); }
+    drawTable(); drawBrain(); if((handNo%6)===0||NOW<80) drawPolicy();
+    requestAnimationFrame(tick); }
+
+  $("#play").onclick=()=>{ playing=!playing; $("#play").textContent=playing?"⏸ Pause":"▶ Play"; };
+  $("#step").onclick=()=>{ playing=false; $("#play").textContent="▶ Play"; beat(); updateHUD(); };
+  $("#speed").oninput=()=>{ $("#rps").textContent=(+$("#speed").value)+" steps/s"; };
+  $("#table").addEventListener("click",e=>{ const cv=$("#table"),b=cv.getBoundingClientRect();
+    const x=(e.clientX-b.left)/b.width*cv.clientWidth, yy=(e.clientY-b.top)/b.height*(cv.clientWidth*0.8);
+    let best=0,bd=1e9; for(let i=0;i<NSEATS;i++){ const p=project(seatAngle(i),1.16); const dd=(p.x-x)**2+(p.y-yy)**2; if(dd<bd){bd=dd;best=i;} } focusSeat=best; });
+
+  if(reduce){ playing=false; $("#play").textContent="▶ Play"; }
+  startHand(); updateHUD(); drawPolicy();
+  requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(tick); });
+})();
+</script>
