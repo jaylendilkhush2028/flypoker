@@ -15,6 +15,11 @@ dependencies = ["numpy", "matplotlib"]
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+# The real-connectome brain (scripts/run_connectome_table.py) also needs the
+# FlyGambler package, which owns the connectome loader + spiking engine and pulls
+# in brian2/scipy. It's a path/VCS install, so it's documented in the README
+# rather than pinned here:  pip install -e /path/to/FlyGambler
+connectome = ["scipy", "pandas", "pyarrow"]
 
 [project.urls]
 Homepage = "https://github.com/jaylendilkhush2028/flypoker"

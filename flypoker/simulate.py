@@ -26,10 +26,16 @@ def policy_probe(agent, hand_strengths=None, n=400, n_seats=6, start_chips=100.0
 
 
 def run_table(cfg: TableConfig | None = None, n_hands: int = 6000, agent_kwargs: dict | None = None,
-              log_every: int = 10, save: str | Path | None = None, verbose: bool = False):
-    """Run the table, sampling chip stacks / dopamine / pain / deaths over time."""
+              log_every: int = 10, save: str | Path | None = None, verbose: bool = False,
+              agent_factory=None):
+    """Run the table, sampling chip stacks / dopamine / pain / deaths over time.
+
+    Pass ``agent_factory`` to seat a different brain (e.g. the real connectome
+    :class:`flypoker.connectome_agent.ConnectomeFlyAgent`); it defaults to the
+    fast behavioural :class:`flypoker.agent.FlyAgent`.
+    """
     cfg = cfg or TableConfig()
-    table = Table(cfg, agent_kwargs=agent_kwargs)
+    table = Table(cfg, agent_kwargs=agent_kwargs, agent_factory=agent_factory)
     hist = {"hand": [], "chips": [], "deaths": [], "dopamine": [], "pain": [],
             "played_strength": [], "folded_strength": []}
 

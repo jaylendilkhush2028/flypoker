@@ -35,6 +35,29 @@ real payoff *for that kind of hand*. That's why a fly learns to fold trash and b
 quality. Losing streaks also build a slow **mood**, which can optionally make a fly
 **tilt** (chase when sad).
 
+## Two brains: fast behavioural, or the *real* connectome
+
+FlyPoker seats the same brain as FlyGambler, and you can run it two ways:
+
+- **Fast behavioural brain** (default, `scripts/run_table.py`): a random
+  projection stands in for the Kenyon-cell layer, so a whole table plays
+  *thousands* of hands in seconds. Great for population studies.
+- **The real FlyWire connectome** (`scripts/run_connectome_table.py`): every
+  seat is the actual fruit-fly mushroom body from
+  [FlyGambler](https://github.com/jaylendilkhush2028/flygambler). The poker cue
+  drives real antennal-lobe projection neurons; the real ALPN→KC wiring,
+  sparsened by the APL, makes each fly's **Kenyon-cell code** (~1–2% of ~2,600
+  real KCs fire, as in a living fly); and winning/losing fires the real **PAM**
+  (153-neuron reward) and **PPL1** (8-neuron punishment) dopamine clusters — the
+  dopamine and pain reported are those clusters' actual spikes. The
+  fold/call/raise readout is a dopamine-gated, action-value layer learned on that
+  real KC code (the published model's weights are fixed; the learning is our
+  addition, same as in FlyGambler). It's slower — spiking is ~0.2–0.4 s per hand
+  — so it's a few-hundred-hand showcase, and **the flies still learn to fold
+  trash and play quality within a couple hundred hands, on the real wiring.**
+
+![A real-connectome FlyPoker run](assets/connectome_table.png)
+
 ## What's real vs. simplified
 
 - **Real:** a 52-card deck, real 2-hole + 5-community Texas Hold'em deals, and a
@@ -62,6 +85,19 @@ Writes `runs/table.json` and `runs/table.png` (chip fortunes, dopamine/pain +
 deaths, and the policy the top fly learned). Runs are randomized each time; pass
 `--seed N` to reproduce.
 
+**To play on the real connectome brain**, also install FlyGambler (which owns the
+connectome loader + spiking engine) and fetch the data once, then:
+
+```bash
+pip install -e /path/to/FlyGambler          # brings brian2 + scipy + the loader
+python /path/to/FlyGambler/scripts/download_data.py   # ~135 MB, one time, no login
+python scripts/run_connectome_table.py               # 6 real-brain flies, 400 hands
+python scripts/run_connectome_table.py --hands 800 --no-dopamine   # faster
+```
+
+Point `FLYPOKER_DATA` at the connectome dir if it isn't FlyGambler's own `data/`.
+Writes `runs/connectome_table.{json,png}`.
+
 ## One hand, step by step
 
 1. Every living fly antes; each is dealt 2 hole cards + 5 shared community cards.
@@ -74,12 +110,13 @@ deaths, and the policy the top fly learned). Runs are randomized each time; pass
 ## Layout
 
 ```
-flypoker/   cards.py (deck + 7-card evaluator) · agent.py (the fly brain) ·
+flypoker/   cards.py (deck + 7-card evaluator) · agent.py (fast behavioural brain) ·
+            connectome_agent.py (the REAL FlyWire mushroom body) ·
             table.py (deal/bet/showdown/death) · simulate.py · plots.py
-scripts/    run_table.py
-tests/      hand-evaluator + learning tests
+scripts/    run_table.py · run_connectome_table.py
+tests/      hand-evaluator + learning tests · test_connectome.py (skips w/o data)
 dashboard/  fly_poker.html   (the live 3D app — a self-contained JS port)
-assets/     the README figure
+assets/     the README figures
 ```
 
 ## Credits

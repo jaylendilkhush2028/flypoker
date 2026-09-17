@@ -34,20 +34,33 @@ class TableConfig:
 
 
 class Table:
-    def __init__(self, cfg: TableConfig | None = None, agent_kwargs: dict | None = None):
+    def __init__(
+        self,
+        cfg: TableConfig | None = None,
+        agent_kwargs: dict | None = None,
+        agent_factory=None,
+    ):
+        """``agent_factory(seed, name)`` builds a seat's brain; defaults to the
+        fast behavioural :class:`FlyAgent`. Pass a factory that returns a
+        :class:`flypoker.connectome_agent.ConnectomeFlyAgent` to seat the real
+        FlyWire mushroom body instead (see ``scripts/run_connectome_table.py``).
+        Any agent with the same ``act`` / ``learn`` API and life-stat fields works.
+        """
         self.cfg = cfg or TableConfig()
         self.agent_kwargs = agent_kwargs or {}
+        self.agent_factory = agent_factory or (
+            lambda seed, name: FlyAgent(seed=seed, name=name, **self.agent_kwargs))
         self.rng = random.Random(self.cfg.seed)
         self._next_id = 0
         self.hand_no = 0
         self.deaths = 0
         self.seats = [self._new_fly(i) for i in range(self.cfg.n_seats)]
 
-    def _new_fly(self, seat: int) -> FlyAgent:
+    def _new_fly(self, seat: int):
         fid = self._next_id
         self._next_id += 1
-        a = FlyAgent(seed=self.cfg.seed * 1000 + fid, name=f"{FLY_NAMES[seat % len(FLY_NAMES)]}#{fid}",
-                     **self.agent_kwargs)
+        a = self.agent_factory(seed=self.cfg.seed * 1000 + fid,
+                               name=f"{FLY_NAMES[seat % len(FLY_NAMES)]}#{fid}")
         a.chips = self.cfg.start_chips
         a.alive = True
         a.born_hand = self.hand_no
