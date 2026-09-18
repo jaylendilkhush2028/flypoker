@@ -14,6 +14,13 @@ the fruit-fly mushroom body as a dopamine reinforcement-learning machine — mad
 **▶ Watch it live (3D):** <https://claude.ai/artifact/QUZfvSoUzvYhnMAgxRaURP> — a
 3D table where the flies play Texas Hold'em **one at a time** through the flop,
 turn and river, with each acting fly's mushroom body firing in a side panel.
+*(This one runs the fast behavioural brain, live in the browser.)*
+
+**🧠 Watch the REAL brain:** <https://claude.ai/artifact/Dt5JsZkqnKS3n1mroRtDyP> —
+a replay of a game the actual FlyWire connectome played. The brain panel lights
+the **real Kenyon cells** that fired for each decision, and PAM/PPL1 show the
+**real dopamine-cluster spikes** each win or loss triggered (recorded offline,
+since spiking can't run live in a browser).
 
 ![A FlyPoker run](assets/table.png)
 
@@ -113,9 +120,11 @@ Writes `runs/connectome_table.{json,png}`.
 flypoker/   cards.py (deck + 7-card evaluator) · agent.py (fast behavioural brain) ·
             connectome_agent.py (the REAL FlyWire mushroom body) ·
             table.py (deal/bet/showdown/death) · simulate.py · plots.py
-scripts/    run_table.py · run_connectome_table.py
+scripts/    run_table.py · run_connectome_table.py · record_connectome_game.py
 tests/      hand-evaluator + learning tests · test_connectome.py (skips w/o data)
-dashboard/  fly_poker.html   (the live 3D app — a self-contained JS port)
+dashboard/  fly_poker.html          (live 3D app — behavioural brain, self-contained JS)
+            connectome_replay.html  (replays a recorded REAL-connectome game)
+            connectome_game.json    (a recorded game for the replay)
 assets/     the README figures
 ```
 
