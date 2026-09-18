@@ -57,9 +57,9 @@
 <div class="wrap">
   <header>
     <div>
-      <div class="badge">▶ REPLAY OF THE REAL SPIKING BRAIN</div>
+      <div class="badge">▶ THE REAL BRAIN · TRULY RANDOM · FOREVER</div>
       <div class="brand"><h1><span class="real">🧠</span> FlyPoker · the <span class="real">real</span> fly brain</h1></div>
-      <div class="tag">Not a simulation of a brain — a recording of one. Six seats of the actual FlyWire <b>connectome mushroom body</b> played poker; this replays every hand. The dots in the brain panel are the <b style="color:var(--kc)">real Kenyon cells</b> that fired for each decision, and PAM / PPL1 are the <b>real dopamine-cluster spikes</b> the win or loss triggered.</div>
+      <div class="tag">Six seats of the actual FlyWire <b>connectome mushroom body</b>, playing an endless stream of freshly-shuffled hands. Every decision runs through the brain's <b style="color:var(--kc)">real Kenyon-cell code</b> and its <b>learned</b> fold/call/raise policy; wins and losses fire the <b>real PAM / PPL1 dopamine spikes</b>. No loop, no script — a new random deal every hand.</div>
     </div>
     <div class="hud" id="hud">loading…</div>
   </header>
@@ -86,7 +86,7 @@
         <div class="barwrap"><span style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)">PPL1 · pain</span><div class="bar"><span class="f" id="pain-bar" style="background:var(--pain)"></span></div></div>
       </div>
       <div style="display:flex; gap:16px; margin-top:14px">
-        <div class="stat"><div class="v mono" id="s-hands">0</div><div class="l">hand of run</div></div>
+        <div class="stat"><div class="v mono" id="s-hands">0</div><div class="l">hands dealt</div></div>
         <div class="stat"><div class="v mono" id="s-deaths" style="color:var(--pain)">0</div><div class="l">flies died</div></div>
         <div class="stat"><div class="v mono" id="s-kc" style="color:var(--kc)">—</div><div class="l">KCs firing</div></div>
       </div>
@@ -113,8 +113,8 @@
   </div>
 
   <p class="foot">
-    <b>What you're watching.</b> A table of the real fruit-fly connectome played this game offline (spiking is ~0.3 s per hand, too slow to run live in a browser), and every hand was recorded: the cards, the exact Kenyon cells that fired, the fold/call/raise values the brain read out, and the PAM/PPL1 dopamine spikes each outcome caused. This page replays that log on the 3D table.
-    <span class="dot">·</span>Perception (the Kenyon-cell code) and affect (PAM/PPL1) are the real connectome; the action readout is the dopamine-gated learned layer. A behavioural model for fun — not gambling advice.
+    <b>What you're watching.</b> The real spiking connectome can't run inside a browser, so its brain was distilled once: the <b>actual Kenyon cells</b> it fires for every hand strength, the fold/call/raise policy each fly <b>learned</b> on the real circuit, and the real PAM/PPL1 dopamine spikes a win or loss triggers. This page then deals <b>genuinely random</b> hands forever and drives every fly through those real-brain tables — so the cards never repeat, and the perception, policy and dopamine are all the real connectome's.
+    <span class="dot">·</span>The flies are mature (trained) and don't learn further here; decisions key on hand strength. A behavioural model for fun — not gambling advice.
   </p>
 </div>
 
@@ -129,12 +129,91 @@
   const RCHAR={11:"J",12:"Q",13:"K",14:"A"}, SCHAR="♣♦♥♠";
   const rc=r=>RCHAR[r]||(""+r);
 
-  let META=null, HANDS=[], NS=6, NKC=2597;
-  let handIdx=0, phase="turn", actSeat=0, focus=0;
-  let NOW=0, fireT=-9999, danT=-9999, playing=true, lastT=0, acc=0;
-  let dopaEMA=0, painEMA=0, deathsSoFar=0, chipsNow={};
+  // ---------------- real card engine (fresh random deal every hand) ----------------
+  const RANKS=[2,3,4,5,6,7,8,9,10,11,12,13,14], SUITS=[0,1,2,3];
+  function shuffled(){ const d=[]; for(const r of RANKS)for(const s of SUITS)d.push([r,s]);
+    for(let i=d.length-1;i>0;i--){const j=(Math.random()*(i+1))|0; const t=d[i];d[i]=d[j];d[j]=t;} return d; }
+  function straightHigh(rset){ const s=new Set(rset); let w=0; if([14,2,3,4,5].every(x=>s.has(x)))w=5;
+    for(let hi=14;hi>=6;hi--){ let ok=true; for(let i=0;i<5;i++) if(!s.has(hi-i)){ok=false;break;} if(ok)return hi; } return w; }
+  function pack(cat,tb){ tb=tb.concat([0,0,0,0,0]).slice(0,5); let v=cat; for(const k of tb) v=v*15+k; return v; }
+  function score5(cards){ const ranks=cards.map(c=>c[0]).sort((a,b)=>b-a); const suits=cards.map(c=>c[1]);
+    const counts={}; for(const r of ranks) counts[r]=(counts[r]||0)+1;
+    const byc=Object.keys(counts).map(k=>[+k,counts[k]]).sort((a,b)=>b[1]-a[1]||b[0]-a[0]);
+    const kick=byc.map(x=>x[0]), shape=byc.map(x=>x[1]); const isF=new Set(suits).size===1;
+    const sh=(Object.keys(counts).length===5)?straightHigh(Object.keys(counts).map(Number)):0;
+    if(isF&&sh)return pack(8,[sh]); if(shape[0]===4)return pack(7,kick); if(shape[0]===3&&shape[1]===2)return pack(6,kick);
+    if(isF)return pack(5,ranks); if(sh)return pack(4,[sh]); if(shape[0]===3)return pack(3,kick);
+    if(shape[0]===2&&shape[1]===2)return pack(2,kick); if(shape[0]===2)return pack(1,kick); return pack(0,ranks); }
+  const C57=(()=>{const o=[];for(let a=0;a<3;a++)for(let b=a+1;b<4;b++)for(let c=b+1;c<5;c++)for(let d=c+1;d<6;d++)for(let e=d+1;e<7;e++)o.push([a,b,c,d,e]);return o;})();
+  function bestOfSeven(sev){ let best=-1; for(const comb of C57){ const sc=score5(comb.map(i=>sev[i])); if(sc>best)best=sc;} return best; }
+  const MINP=pack(0,[7,5,4,3,2]), MAXP=pack(8,[14]);
+  const strength=sc=>Math.max(0,Math.min(1,(sc-MINP)/(MAXP-MINP)));
 
-  // ---------- geometry / 3D helpers (shared with the live dashboard) ----------
+  // ---------------- brain tables (distilled from the real connectome) ----------------
+  let BR=null, NS=6, NKC=2597, BET=4, ANTE=1, START=100, BINS=[], POOL=[];
+  const NAMES=["Buzz","Zip","Dart","Gnat","Midge","Vex","Pip","Skit","Blip","Fizz"];
+  function nearestBin(hs){ const n=BINS.length; let i=Math.round((hs-BINS[0])/(BINS[n-1]-BINS[0])*(n-1)); return Math.max(0,Math.min(n-1,i)); }
+  function lerpCurve(curve,mag){ const n=curve.length, x=Math.max(0,Math.min(1,mag/BR.mag_max))*(n-1); const i=Math.floor(x),f=x-i; return i>=n-1?curve[n-1]:curve[i]*(1-f)+curve[i+1]*f; }
+  function samplePolicy(p){ let r=Math.random(), a=0; for(;a<3;a++){ r-=p[a]; if(r<=0)break; } return a>2?2:a; }
+
+  // ---------------- table state (live, endless) ----------------
+  let seats=[], handNo=0, button=0, deaths=0, nextId=0;
+  let hand=null, phase="turn", actSeat=0, focus=0;
+  let NOW=0, fireT=-9999, danT=-9999, playing=true, lastT=0, acc=0;
+  let dopaEMA=0, painEMA=0;
+
+  function newFly(seat){ const pol=POOL[(Math.random()*POOL.length)|0];
+    return {id:nextId++, seat, name:NAMES[seat%NAMES.length]+"#"+nextId, p:pol.p, chips:START, baseline:0, born:handNo}; }
+
+  function startHand(){
+    handNo++; button=(button+1)%NS;
+    const newborn=[];
+    for(let i=0;i<NS;i++){ if(seats[i].chips<ANTE){ deaths++; seats[i]=newFly(i); newborn.push(i);} }
+    const deck=shuffled(); const community=deck.slice(0,5); let di=5;
+    let pot=0; const rs=[];
+    for(let i=0;i<NS;i++){ seats[i].chips-=ANTE; pot+=ANTE; }
+    for(let i=0;i<NS;i++){ const fly=seats[i]; const hole=[deck[di++],deck[di++]];
+      const sc=bestOfSeven(hole.concat(community)); const hs=strength(sc); const bin=nearestBin(hs);
+      const probs=fly.p[bin]; const a=samplePolicy(probs);
+      const chips0=fly.chips; const want=[0,BET,2*BET][a]; const put=Math.min(want,fly.chips);
+      fly.chips-=put; pot+=put;
+      rs.push({seat:i,name:fly.name,hole,hs:+hs.toFixed(3),bin,score:sc,chips0:+chips0.toFixed(1),
+        action:["fold","call","raise"][a],aIdx:a,put:+put.toFixed(1),Q:probs.slice(),
+        kc:BR.kc_by_bin[bin], folded:a===0, pam:0, ppl1:0, chips1:0, delta:0, won:false, committed:ANTE+put}); }
+    // showdown resolution (revealed at showdown phase)
+    const cont=rs.filter(s=>!s.folded && s.committed>ANTE).map(s=>s.seat);
+    let winners;
+    if(cont.length){ let best=-1; for(const i of cont) if(rs[i].score>best)best=rs[i].score; winners=cont.filter(i=>rs[i].score===best); }
+    else winners=rs.map(s=>s.seat);
+    const share=winners.length?pot/winners.length:0;
+    hand={h:handNo,button,community,pot:+pot.toFixed(1),newborn,seats:rs,winners,share};
+    phase="turn"; actSeat=0; focus=0;
+  }
+  function settleHand(){
+    const H=hand;
+    for(const s of H.seats){ const fly=seats[s.seat];
+      s.delta=+(((H.winners.includes(s.seat))?H.share:0)-s.committed).toFixed(1);
+      s.won=H.winners.includes(s.seat);
+      if(s.won) fly.chips+=H.share;
+      s.chips1=+fly.chips.toFixed(1);
+      const reward=s.delta/BET; const rpe=reward-fly.baseline; fly.baseline+=0.05*rpe;
+      s.pam = rpe>=0 ? Math.round(lerpCurve(BR.pam_curve, Math.abs(rpe))) : 0;
+      s.ppl1= rpe<0  ? Math.round(lerpCurve(BR.ppl1_curve, Math.abs(rpe))) : 0;
+    }
+    let dp=0,pn=0; for(const s of H.seats){ dp+=s.pam; pn+=s.ppl1; }
+    dopaEMA=0.8*dopaEMA+0.2*(dp/NS); painEMA=0.8*painEMA+0.2*(pn/NS);
+  }
+  function beat(){
+    if(!BR) return;
+    if(!hand){ startHand(); return; }
+    if(phase==="turn"){
+      if(actSeat<NS){ focus=actSeat; fireT=NOW; actSeat++; }
+      else { phase="showdown"; settleHand(); focus=hand.winners.length?hand.winners[0]:0; danT=NOW; }
+    } else { startHand(); }
+    updateHUD();
+  }
+
+  // ---------------- 3D rendering (shared with the live dashboard) ----------------
   function fit(cv,cssH){ const dpr=Math.min(devicePixelRatio||1,2), w=cv.clientWidth||cv.parentElement.clientWidth;
     cv.width=Math.round(w*dpr); cv.height=Math.round(cssH*dpr); cv.style.height=cssH+"px";
     const ctx=cv.getContext("2d"); ctx.setTransform(dpr,0,0,dpr,0,0); return {ctx,w,h:cssH}; }
@@ -172,38 +251,17 @@
     ctx.fillStyle="#2b3650"; ctx.beginPath(); ctx.arc(0,-9,6,0,7); ctx.fill();
     ctx.fillStyle="#ff5a6e"; for(const sg of[-1,1]){ctx.beginPath();ctx.arc(sg*3,-10,2.6,0,7);ctx.fill();} ctx.restore(); }
 
-  // ---------- playback ----------
-  function potNow(H){ let p=META.ante*NS; for(let i=0;i<actSeat;i++) p+=H.seats[i].put; return (phase==="turn")?p:H.pot; }
+  function potNow(H){ let p=ANTE*NS; for(let i=0;i<actSeat;i++) p+=H.seats[i].put; return (phase==="turn")?p:H.pot; }
   function chipsOf(H,i){ const s=H.seats[i]; if(phase!=="turn") return s.chips1; if(i<actSeat) return s.chips0 - s.put; return s.chips0; }
-
-  function beat(){
-    if(!HANDS.length) return;
-    const H=HANDS[handIdx];
-    if(phase==="turn"){
-      if(actSeat<NS){ focus=actSeat; fireT=NOW; actSeat++; }
-      else { phase="showdown"; focus=H.winners.length?H.winners[0]:0; danT=NOW; settleHand(H); }
-    } else {
-      handIdx=(handIdx+1)%HANDS.length; phase="turn"; actSeat=0; focus=0;
-      if(handIdx===0){ deathsSoFar=0; }         // loop restart
-    }
-    updateHUD();
-  }
-  function settleHand(H){
-    for(const s of H.seats) chipsNow[s.seat]=s.chips1;
-    deathsSoFar += (H.newborn?H.newborn.length:0);
-    let dp=0,pn=0; for(const s of H.seats){ dp+=s.pam; pn+=s.ppl1; }
-    dopaEMA=0.8*dopaEMA+0.2*(dp/NS); painEMA=0.8*painEMA+0.2*(pn/NS);
-  }
 
   function drawTable(){
     const cv=$("#table"); const {ctx,w,h}=fit(cv,Math.max(460,cv.clientWidth*0.8)); ctx.clearRect(0,0,w,h); setGeom(w,h);
-    if(!HANDS.length) return; const H=HANDS[handIdx]; const showdown=phase!=="turn";
+    if(!hand) return; const H=hand; const showdown=phase!=="turn";
     drawTable3D(ctx);
     ctx.textAlign="center"; ctx.textBaseline="top";
     ctx.fillStyle="rgba(0,0,0,0.35)"; rr(ctx,w/2-70,10,140,26,13); ctx.fill();
     ctx.fillStyle=showdown?COL.gold:COL.kc; ctx.font="700 13px 'IBM Plex Mono',monospace";
     ctx.fillText(showdown?"SHOWDOWN":"REAL BRAIN · ACTING", w/2, 15);
-    // community
     const cw=32; const cx0=TB.cx-2*cw;
     for(let k=0;k<5;k++) drawCard3D(ctx,cx0+k*cw,TB.cy-6,1.0,H.community[k],true);
     chipStack(ctx,TB.cx,TB.cy+30,potNow(H),0.9);
@@ -224,13 +282,12 @@
       const ch=chipsOf(H,i); ctx.fillStyle=ch<=5?COL.pain:COL.ink; ctx.font="600 "+(11*sc)+"px 'IBM Plex Mono',monospace"; ctx.fillText("$"+Math.round(ch), p.x, p.y+22*sc);
       if(acted){ const lbl=s.action.toUpperCase(); ctx.fillStyle=s.action==="fold"?COL.muted:(s.action==="raise"?COL.gold:COL.kc); ctx.font="700 "+(10*sc)+"px 'IBM Plex Mono',monospace"; ctx.fillText(lbl, p.x, p.y-28*sc); }
       else if(isNext){ ctx.fillStyle=COL.kc; ctx.font=(13*sc)+"px 'IBM Plex Mono',monospace"; ctx.fillText("…", p.x, p.y-30*sc); }
-      if(H.newborn&&H.newborn.includes(i)){ ctx.fillStyle=COL.dopa; ctx.font=(10*sc)+"px 'IBM Plex Mono',monospace"; ctx.fillText("✨new", p.x, p.y+34*sc); }
+      if(H.newborn.includes(i)){ ctx.fillStyle=COL.dopa; ctx.font=(10*sc)+"px 'IBM Plex Mono',monospace"; ctx.fillText("✨new", p.x, p.y+34*sc); }
       if(i===H.button){ const bp=project(seatAngle(i),0.96); ctx.fillStyle="#f2f4f8"; ctx.beginPath(); ctx.arc(bp.x,bp.y,7*cs,0,7); ctx.fill(); ctx.fillStyle="#15202f"; ctx.font="bold "+(9*cs)+"px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText("D",bp.x,bp.y+1); }
     }
     if(showdown&&H.winners.length){ ctx.fillStyle=COL.gold; ctx.font="600 14px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.textBaseline="top"; ctx.fillText("★ "+H.winners.map(i=>H.seats[i].name).join(", ")+" win $"+Math.round(H.pot), w/2, h-22); }
   }
 
-  // ---------- brain: the REAL Kenyon cells ----------
   let kcGrid=null;
   function buildGrid(w,h){ const cols=Math.round(Math.sqrt(NKC*1.7)); const rows=Math.ceil(NKC/cols);
     const x0=w*0.06,x1=w*0.66,y0=h*0.16,y1=h*0.93; const pts=new Float32Array(NKC*2);
@@ -238,29 +295,25 @@
     kcGrid={w,pts,cols,rows}; }
   function drawBrain(){
     const cv=$("#brain"); const {ctx,w,h}=fit(cv,Math.max(320,cv.clientWidth*0.78)); ctx.clearRect(0,0,w,h);
-    if(!HANDS.length) return; const H=HANDS[handIdx]; const s=H.seats[focus];
+    if(!hand) return; const H=hand; const s=H.seats[focus];
     if(!kcGrid||kcGrid.w!==w) buildGrid(w,h);
     ctx.textAlign="left"; ctx.textBaseline="top"; ctx.fillStyle=COL.muted; ctx.font="10px 'IBM Plex Mono',monospace";
     ctx.fillText("REAL KENYON CELLS ("+NKC.toLocaleString()+")", w*0.06, h*0.05);
     ctx.textAlign="right"; ctx.fillStyle=COL.kc; ctx.fillText(s.kc.length+" firing", w*0.66, h*0.05);
-    // all KC dots dim
     ctx.fillStyle=COL.faint; for(let i=0;i<NKC;i++){ ctx.globalAlpha=0.5; ctx.beginPath(); ctx.arc(kcGrid.pts[i*2],kcGrid.pts[i*2+1],0.9,0,7); ctx.fill(); }
     ctx.globalAlpha=1;
-    // the ones that actually fired, with a sweep flourish
     const act=Math.max(0.15,1-((NOW-fireT)/700)); const sweep=reduce?1:((NOW/320)%1);
     const xL=w*0.06,xR=w*0.66, sx=xL+(xR-xL)*sweep;
     for(const k of s.kc){ const x=kcGrid.pts[k*2], y=kcGrid.pts[k*2+1]; const fl=Math.max(0,1-Math.abs(x-sx)/(w*0.06))*act;
       ctx.beginPath(); ctx.arc(x,y,2.0+fl*2.2,0,7); ctx.shadowColor=COL.kc; ctx.shadowBlur=4+fl*10; ctx.fillStyle=COL.kc; ctx.globalAlpha=0.55+0.45*fl; ctx.fill(); }
     ctx.globalAlpha=1; ctx.shadowBlur=0;
-    // action values (fold/call/raise) read out from those KCs
-    const Q=s.Q, mn=Math.min(...Q,0), mx=Math.max(...Q,0.001); const chosenIdx=["fold","call","raise"].indexOf(s.action);
+    const Q=s.Q, mn=Math.min(...Q,0), mx=Math.max(...Q,0.001); const chosenIdx=s.aIdx;
     const labels=["fold","call","raise"], acol=[COL.muted,COL.kc,COL.gold]; const bx=w*0.72, bw=w*0.1;
-    ctx.textAlign="center"; ctx.fillStyle=COL.muted; ctx.font="10px 'IBM Plex Mono',monospace"; ctx.fillText("READOUT", w*0.82, h*0.05);
+    ctx.textAlign="center"; ctx.fillStyle=COL.muted; ctx.font="10px 'IBM Plex Mono',monospace"; ctx.fillText("POLICY", w*0.82, h*0.05);
     for(let a=0;a<3;a++){ const by=h*(0.17+a*0.25), bh=h*0.17, frac=(Q[a]-mn)/(mx-mn+1e-9);
       ctx.fillStyle=COL.panel; ctx.strokeStyle=COL.hair; rr(ctx,bx,by,bw,bh,3); ctx.fill(); ctx.stroke();
       if(a===chosenIdx){ctx.shadowColor=acol[a];ctx.shadowBlur=12;} ctx.fillStyle=acol[a]; rr(ctx,bx,by,Math.max(2,bw*frac),bh,3); ctx.fill(); ctx.shadowBlur=0;
       ctx.fillStyle=a===chosenIdx?COL.ink:COL.muted; ctx.textAlign="left"; ctx.font=(a===chosenIdx?"700 ":"")+"9px 'IBM Plex Mono',monospace"; ctx.fillText(labels[a],bx+bw+5,by+bh*0.5+3); ctx.textAlign="center"; }
-    // real PAM / PPL1 dopamine spikes (only meaningful at showdown)
     const showdown=phase!=="turn"; const won=showdown&&H.winners.includes(focus); const lost=showdown&&!won&&!s.folded;
     function dan(x,y,label,val,color,onNow){ ctx.beginPath(); ctx.arc(x,y,11,0,7); ctx.globalAlpha=onNow?1:0.18; ctx.fillStyle=color; if(onNow){ctx.shadowColor=color;ctx.shadowBlur=14;} ctx.fill(); ctx.globalAlpha=1; ctx.shadowBlur=0;
       ctx.fillStyle=COL.muted; ctx.font="9px 'IBM Plex Mono',monospace"; ctx.textAlign="center"; ctx.fillText(label,x,y+16); if(showdown){ctx.fillStyle=color; ctx.fillText((onNow?Math.round(val):0)+" spk",x,y+27);} }
@@ -269,43 +322,42 @@
   }
 
   function updateHUD(){
-    if(!HANDS.length) return; const H=HANDS[handIdx]; const s=H.seats[focus]; const showdown=phase!=="turn";
-    $("#hud").textContent="hand "+H.h+" / "+META.hands+" · "+(showdown?"showdown":"real brain deciding");
-    $("#s-hands").textContent=H.h; $("#s-deaths").textContent=deathsSoFar; $("#s-kc").textContent=s.kc.length;
+    if(!hand) return; const H=hand; const s=H.seats[focus]; const showdown=phase!=="turn";
+    $("#hud").textContent="hand "+H.h+" · ∞ · "+(showdown?"showdown":"real brain deciding");
+    $("#s-hands").textContent=H.h; $("#s-deaths").textContent=deaths; $("#s-kc").textContent=s.kc.length;
     $("#dopa-bar").style.width=Math.round(Math.min(1,dopaEMA/220)*100)+"%";
-    $("#pain-bar").style.width=Math.round(Math.min(1,painEMA/60)*100)+"%";
+    $("#pain-bar").style.width=Math.round(Math.min(1,painEMA/40)*100)+"%";
     $("#focus-name").textContent=s.name;
     $("#focus-what").textContent = showdown ? (H.winners.includes(focus)?"won the pot":(s.folded?"folded, lost":"lost the hand"))
       : (s.folded && focus<actSeat ? "folded" : "is deciding…");
-    // leaderboard from latest known chips
-    const rows=[]; for(let i=0;i<NS;i++){ const nm=H.seats[i].name; const c=(chipsNow[i]!=null?chipsNow[i]:H.seats[i].chips0); rows.push([nm,c]); }
-    rows.sort((a,b)=>b[1]-a[1]); const box=$("#lead"); box.innerHTML="";
+    const rows=[]; for(let i=0;i<NS;i++) rows.push([seats[i].name, seats[i].chips]); rows.sort((a,b)=>b[1]-a[1]);
+    const box=$("#lead"); box.innerHTML="";
     for(const [nm,c] of rows){ const d=document.createElement("div"); d.className="row"; d.innerHTML='<span class="chip" style="background:'+(c<=5?COL.pain:COL.dopa)+'"></span><span'+(c<=5?' class="dead"':'')+'>'+nm+'</span><span>$'+Math.round(c)+'</span>'; box.appendChild(d); }
-    // this-decision detail
     if(focus<actSeat||showdown){ const act=s.action.toUpperCase();
       $("#detail").innerHTML='<span style="color:'+COL.ink+'">'+s.name+'</span> · '+rc(s.hole[0][0])+SCHAR[s.hole[0][1]]+' '+rc(s.hole[1][0])+SCHAR[s.hole[1][1]]
         +' · strength <b style="color:'+COL.kc+'">'+s.hs.toFixed(2)+'</b><br>'+s.kc.length+' Kenyon cells fired → <b style="color:'+(s.action==="raise"?COL.gold:s.action==="fold"?COL.muted:COL.kc)+'">'+act+'</b>'
         +(showdown?('<br>outcome '+(s.delta>=0?'<span style="color:'+COL.dopa+'">+$'+Math.round(s.delta)+'</span> · PAM '+Math.round(s.pam)+' spk':'<span style="color:'+COL.pain+'">-$'+Math.round(-s.delta)+'</span> · PPL1 '+Math.round(s.ppl1)+' spk')):''); }
     else $("#detail").textContent="…thinking";
-    $("#tablelog").innerHTML="hand "+H.h+": board "+H.community.map(c=>rc(c[0])+SCHAR[c[1]]).join(" ")+(showdown?(' — <span class="a">'+H.winners.map(i=>H.seats[i].name).join(", ")+'</span> win $'+Math.round(H.pot)+(H.newborn&&H.newborn.length?' · <span class="b">'+H.newborn.length+' new fly</span>':'')):'');
+    $("#tablelog").innerHTML="hand "+H.h+": board "+H.community.map(c=>rc(c[0])+SCHAR[c[1]]).join(" ")+(showdown?(' — <span class="a">'+H.winners.map(i=>H.seats[i].name).join(", ")+'</span> win $'+Math.round(H.pot)+(H.newborn.length?' · <span class="b">'+H.newborn.length+' new fly</span>':'')):'');
   }
 
   function tick(ts){ NOW=ts; const dt=Math.min(0.1,(ts-lastT)/1000); lastT=ts;
-    if(playing&&HANDS.length){ const bps=+$("#speed").value; acc+=dt*bps; let n=0; while(acc>=1&&n<40){ beat(); acc-=1; n++; } }
+    if(playing&&BR){ const bps=+$("#speed").value; acc+=dt*bps; let n=0; while(acc>=1&&n<40){ beat(); acc-=1; n++; } }
     drawTable(); drawBrain(); requestAnimationFrame(tick); }
 
   $("#play").onclick=()=>{ playing=!playing; $("#play").textContent=playing?"⏸ Pause":"▶ Play"; };
   $("#step").onclick=()=>{ playing=false; $("#play").textContent="▶ Play"; beat(); };
   $("#speed").oninput=()=>{ $("#rps").textContent=(+$("#speed").value)+" steps/s"; };
 
-  function start(data){ META=data.meta; HANDS=data.hands; NS=META.n_seats; NKC=META.n_kc;
-    for(let i=0;i<NS;i++) chipsNow[i]=META.start_chips;
-    $("#src").textContent="log: "+META.hands+" hands · seed "+META.seed+" · "+META.pam_n+" PAM / "+META.ppl1_n+" PPL1 neurons";
+  function start(data){ BR=data; const m=data.meta; NS=m.n_seats; NKC=m.n_kc; BET=m.bet; ANTE=m.ante; START=m.start_chips; BINS=data.bins;
+    POOL=(data.policies&&data.policies.length)?data.policies:[{p:data.naive_policy}];
+    seats=[]; for(let i=0;i<NS;i++) seats.push(newFly(i));
+    $("#src").textContent="real brain · "+m.n_kc.toLocaleString()+" KC · "+m.pam_n+" PAM / "+m.ppl1_n+" PPL1 · trained "+m.trained_hands+" hands";
     if(reduce){ playing=false; $("#play").textContent="▶ Play"; }
-    updateHUD(); requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(tick); }); }
+    startHand(); updateHUD(); requestAnimationFrame(t=>{ lastT=t; requestAnimationFrame(tick); }); }
 
-  fetch("connectome_game.json").then(r=>{ if(!r.ok) throw new Error(r.status+" "+r.statusText); return r.json(); })
+  fetch("connectome_brain.json").then(r=>{ if(!r.ok) throw new Error(r.status+" "+r.statusText); return r.json(); })
     .then(start)
-    .catch(e=>{ $("#err").style.display="block"; $("#err").textContent="Couldn't load connectome_game.json ("+e.message+"). This viewer replays a recorded run — generate it with scripts/record_connectome_game.py and publish it alongside this page."; $("#hud").textContent="no data"; });
+    .catch(e=>{ $("#err").style.display="block"; $("#err").textContent="Couldn't load connectome_brain.json ("+e.message+"). Generate it with scripts/export_connectome_brain.py and publish it alongside this page."; $("#hud").textContent="no data"; });
 })();
 </script>

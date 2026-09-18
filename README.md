@@ -16,11 +16,15 @@ the fruit-fly mushroom body as a dopamine reinforcement-learning machine — mad
 turn and river, with each acting fly's mushroom body firing in a side panel.
 *(This one runs the fast behavioural brain, live in the browser.)*
 
-**🧠 Watch the REAL brain:** <https://claude.ai/artifact/Dt5JsZkqnKS3n1mroRtDyP> —
-a replay of a game the actual FlyWire connectome played. The brain panel lights
-the **real Kenyon cells** that fired for each decision, and PAM/PPL1 show the
-**real dopamine-cluster spikes** each win or loss triggered (recorded offline,
-since spiking can't run live in a browser).
+**🧠 Watch the REAL brain (endless):** <https://claude.ai/artifact/Dt5JsZkqnKS3n1mroRtDyP>
+— six seats of the actual FlyWire connectome playing an **endless, truly-random**
+stream of freshly-shuffled hands. The brain panel lights the **real Kenyon cells**
+that fire for each decision, decisions run through each fly's **learned** policy,
+and PAM/PPL1 show the **real dopamine-cluster spikes** a win or loss triggers.
+The spiking brain can't run live in a browser, so it's distilled once
+(`scripts/export_connectome_brain.py` → the real KC code per hand strength + the
+trained policies + the dopamine curves) and the page deals random hands forever
+against those real-brain tables — no loop, no script.
 
 ![A FlyPoker run](assets/table.png)
 
@@ -120,11 +124,13 @@ Writes `runs/connectome_table.{json,png}`.
 flypoker/   cards.py (deck + 7-card evaluator) · agent.py (fast behavioural brain) ·
             connectome_agent.py (the REAL FlyWire mushroom body) ·
             table.py (deal/bet/showdown/death) · simulate.py · plots.py
-scripts/    run_table.py · run_connectome_table.py · record_connectome_game.py
+scripts/    run_table.py · run_connectome_table.py ·
+            export_connectome_brain.py (distil the trained real brain for the browser) ·
+            record_connectome_game.py  (record a full real-brain game to JSON)
 tests/      hand-evaluator + learning tests · test_connectome.py (skips w/o data)
 dashboard/  fly_poker.html          (live 3D app — behavioural brain, self-contained JS)
-            connectome_replay.html  (replays a recorded REAL-connectome game)
-            connectome_game.json    (a recorded game for the replay)
+            connectome_replay.html  (endless, truly-random REAL-connectome viewer)
+            connectome_brain.json   (the distilled real brain it runs on)
 assets/     the README figures
 ```
 

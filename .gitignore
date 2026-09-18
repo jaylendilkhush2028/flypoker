@@ -12,3 +12,6 @@ runs/
 
 # OS
 .DS_Store
+
+# large regenerable connectome recording (viewer uses the distilled connectome_brain.json)
+dashboard/connectome_game.json
